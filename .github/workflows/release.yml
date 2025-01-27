@@ -1,0 +1,85 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on version tags
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            output_name: SilenceRemover.exe
+            asset_name: SilenceRemover-Windows.zip
+          - os: macos-latest
+            output_name: SilenceRemover
+            asset_name: SilenceRemover-MacOS.zip
+          - os: ubuntu-latest
+            output_name: SilenceRemover
+            asset_name: SilenceRemover-Linux.zip
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+        
+    - name: Install system dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+
+    - name: Install system dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install ffmpeg
+
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller --onefile --windowed --name ${{ matrix.output_name }} gui.py
+        
+    - name: Create ZIP archive
+      run: |
+        cd dist
+        zip -r ../${{ matrix.asset_name }} ./*
+      shell: bash
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.asset_name }}
+        path: ${{ matrix.asset_name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          SilenceRemover-Windows.zip
+          SilenceRemover-MacOS.zip
+          SilenceRemover-Linux.zip
+        draft: false
+        prerelease: false
+        generate_release_notes: true
