@@ -2,6 +2,7 @@
 from pydub import AudioSegment
 from pydub.silence import detect_nonsilent
 import os
+from datetime import datetime
 
 # Define the data folder
 data_folder = '../data'
@@ -12,15 +13,16 @@ if not os.path.exists(data_folder):
     print(f"The folder '{data_folder}' was not found and has been created. Please add video files to this folder.")
     exit()
 
-# Check if there are available files in the data folder
-video_files = [file for file in os.listdir(data_folder) if file.endswith(".mp4")]
+# Check for available video files in supported formats (.mp4, .mov, .mkv)
+supported_formats = (".mp4", ".mov", ".mkv")
+video_files = [file for file in os.listdir(data_folder) if file.endswith(supported_formats)]
 
 # If there is no file available, inform the user and exit
 if not video_files:
-    print(f"The folder '{data_folder}' is empty. Please add video files to process.")
+    print(f"The folder '{data_folder}' contains no supported video files. Please add files in .mp4, .mov, or .mkv formats.")
     exit()
 
-# List video files for the user
+# List available video files for the user
 print("Available video files:")
 for idx, file_name in enumerate(video_files, start=1):
     print(f"{idx}: {file_name}")
@@ -38,9 +40,9 @@ while selected_file is None:
     except ValueError:
         print("Invalid input. Please enter a valid number.")
 
-# Load video and extract audio
+# Load the selected video and extract its audio
 video = VideoFileClip(selected_file)
-audio = AudioSegment.from_file(selected_file, format="mp4")
+audio = AudioSegment.from_file(selected_file)
 
 # Silence detection parameters
 min_silence_len = 500
@@ -61,13 +63,15 @@ clips = []
 for start, end in padded_ranges:
     start_seconds = start / 1000
     end_seconds = end / 1000
-    clip = video.subclip(start_seconds, end_seconds)
+    clip = video.subclipped(start_seconds, end_seconds)
     clips.append(clip)
 
 # Save the processed video
 if clips:
     final_video = concatenate_videoclips(clips)
-    output_path = os.path.join(data_folder, "processed_video.mp4")
+    file_extension = os.path.splitext(selected_file)[1]  # Get the extension of the selected video
+    current_date = datetime.now().strftime("%Y-%m-%d")  # Get current date in YYYY-MM-DD format
+    output_path = os.path.join(data_folder, f"processed_video_{current_date}{file_extension}")  # Add date to output name
     final_video.write_videofile(output_path, codec="libx264", audio_codec="aac")
     print(f"Processed video saved to: {output_path}")
 else:
