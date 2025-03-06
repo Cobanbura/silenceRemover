@@ -1,0 +1,22 @@
+
+# Ignore the data folder
+data/
+
+# Other common ignores
+*.log
+*.tmp
+node_modules/
+.env
+
+# Python-related ignores
+__pycache__/
+*.py[cod]
+*.pyo
+
+# MacOS system files
+.DS_Store
+
+# Windows system files
+Thumbs.db
+desktop.ini
+
